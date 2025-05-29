@@ -15,6 +15,7 @@
   "description": "",
   "dependencies": {
     "@prisma/client": "^6.8.2",
+    "@tailwindcss/postcss": "^4.1.8",
     "next": "^15.1.8",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
@@ -26,7 +27,7 @@
     "@types/react": "^19.1.5",
     "@types/react-dom": "^19.1.5",
     "autoprefixer": "^10.4.21",
-    "postcss": "^8.5.3",
+    "postcss": "^8.5.4",
     "prisma": "^6.8.2",
     "tailwindcss": "^4.1.8",
     "typescript": "^5.8.3"

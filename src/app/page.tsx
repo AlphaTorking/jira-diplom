@@ -1,21 +1,21 @@
 // src/app/page.tsx
 "use client";
-import { useState } from 'react';
-import { FiUser, FiFilter, FiPlus, FiChevronDown, FiChevronRight } from 'react-icons/fi';
-import "tailwindcss";
+import { useEffect, useState } from 'react';
+import { FiUser, FiFilter, FiPlus, FiChevronDown, FiChevronRight, FiX } from 'react-icons/fi';
+import './globals.css'
 
-// Типы данных
+// Типы данных (адаптированные под Prisma)
 interface Task {
   id: number;
   name: string;
-  description: string;
+  description: string | null;
   criticality: string;
   priority: string;
   status: string;
   author: { id: number; login: string };
-  worker?: { id: number; login: string };
-  createDate: string;
-  closeDate?: string;
+  worker?: { id: number; login: string } | null;
+  createDate: Date;
+  closeDate?: Date | null;
   group: { id: number; name: string };
 }
 
@@ -25,78 +25,6 @@ interface Group {
   tasks: Task[];
   isOpen: boolean;
 }
-
-const mockGroups: Group[] = [
-  {
-    id: 1,
-    name: 'Бэклог',
-    isOpen: true,
-    tasks: [
-      {
-        id: 101,
-        name: 'Рефакторинг кода',
-        description: 'Провести рефакторинг модуля авторизации',
-        criticality: 'Средний',
-        priority: 'Высокий',
-        status: 'Новое',
-        author: { id: 1, login: 'admin' },
-        createDate: '2023-10-15',
-        group: { id: 1, name: 'Бэклог' }
-      },
-      {
-        id: 102,
-        name: 'Добавить документацию',
-        description: 'Создать документацию для API',
-        criticality: 'Низкий',
-        priority: 'Нормальный',
-        status: 'Новое',
-        author: { id: 2, login: 'dev1' },
-        createDate: '2023-10-16',
-        group: { id: 1, name: 'Бэклог' }
-      }
-    ]
-  },
-  {
-    id: 2,
-    name: 'В работе',
-    isOpen: true,
-    tasks: [
-      {
-        id: 201,
-        name: 'Исправить баг с авторизацией',
-        description: 'При входе иногда выдает ошибку 500',
-        criticality: 'Высокий',
-        priority: 'Очень высокий',
-        status: 'В работе',
-        author: { id: 3, login: 'manager' },
-        worker: { id: 2, login: 'dev1' },
-        createDate: '2023-10-10',
-        closeDate: '2023-10-20',
-        group: { id: 2, name: 'В работе' }
-      }
-    ]
-  },
-  {
-    id: 3,
-    name: 'Завершено',
-    isOpen: false,
-    tasks: [
-      {
-        id: 301,
-        name: 'Обновить дизайн',
-        description: 'Обновить дизайн главной страницы',
-        criticality: 'Средний',
-        priority: 'Высокий',
-        status: 'Завершено',
-        author: { id: 1, login: 'admin' },
-        worker: { id: 2, login: 'dev1' },
-        createDate: '2023-09-20',
-        closeDate: '2023-10-05',
-        group: { id: 3, name: 'Завершено' }
-      }
-    ]
-  }
-];
 
 // Компонент карточки задачи
 function TaskCard({ task }: { task: Task }) {
@@ -138,8 +66,8 @@ function TaskCard({ task }: { task: Task }) {
           {task.worker && <p>Исполнитель: <span className="font-medium">{task.worker.login}</span></p>}
         </div>
         <div className="text-right">
-          <p>Создана: {task.createDate}</p>
-          {task.closeDate && <p>Завершена: {task.closeDate}</p>}
+          <p>Создана: {task.createDate.toString()}</p>
+          {task.closeDate && <p>Завершена: {task.closeDate.toString()}</p>}
         </div>
       </div>
     </div>
@@ -177,10 +105,59 @@ function GroupItem({ group, toggleGroup }: {
   );
 }
 
-// Главный компонент страницы
 export default function TasksPage() {
-  const [groups, setGroups] = useState<Group[]>(mockGroups);
+  const [groups, setGroups] = useState<Group[]>([]);
   const [activeTab, setActiveTab] = useState('tasks');
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  const [newTask, setNewTask] = useState({
+    name: '',
+    description: '',
+    criticality: 'Низкий',
+    priority: 'Нормальный',
+    status: 'Новое',
+    groupId: 1,
+  });
+
+  // Загрузка групп и задач
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        const response = await fetch('/api/groups');
+        
+        if (!response.ok) {
+          throw new Error('Ошибка загрузки данных');
+        }
+        
+        const data = await response.json();
+        
+        // Добавляем состояние isOpen для каждой группы
+        const groupsWithState = data.map((group: any) => ({
+          ...group,
+          isOpen: true,
+          tasks: group.tasks.map((task: any) => ({
+            ...task,
+            createDate: new Date(task.createDate).toLocaleDateString('ru-RU'),
+            closeDate: task.closeDate 
+              ? new Date(task.closeDate).toLocaleDateString('ru-RU') 
+              : null
+          }))
+        }));
+        
+        setGroups(groupsWithState);
+      } catch (err) {
+        console.error('Ошибка загрузки:', err);
+        setError('Не удалось загрузить данные');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, []);
 
   const toggleGroup = (groupId: number) => {
     setGroups(groups.map(group => 
@@ -188,7 +165,205 @@ export default function TasksPage() {
     ));
   };
 
+  const handleCreateTask = async () => {
+    try {
+      const response = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(newTask)
+      });
+      
+      if (!response.ok) {
+        throw new Error('Ошибка создания задачи');
+      }
+      
+      const createdTask = await response.json();
+      
+      // Форматируем даты для отображения
+      const formattedTask = {
+        ...createdTask,
+        createDate: new Date(createdTask.createDate).toLocaleDateString('ru-RU'),
+        closeDate: createdTask.closeDate 
+          ? new Date(createdTask.closeDate).toLocaleDateString('ru-RU') 
+          : null,
+        group: groups.find(g => g.id === createdTask.groupId)
+      };
+      
+      // Обновляем группы с новой задачей
+      setGroups(groups.map(group => {
+        if (group.id === newTask.groupId) {
+          return {
+            ...group,
+            tasks: [...group.tasks, formattedTask]
+          };
+        }
+        return group;
+      }));
+      
+      // Закрываем модальное окно и сбрасываем форму
+      setIsCreateModalOpen(false);
+      setNewTask({
+        name: '',
+        description: '',
+        criticality: 'Низкий',
+        priority: 'Нормальный',
+        status: 'Новое',
+        groupId: 1,
+      });
+      
+    } catch (err) {
+      console.error('Ошибка создания задачи:', err);
+      setError('Не удалось создать задачу');
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setNewTask(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+   if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-2xl">Загрузка данных...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-2xl text-red-500">{error}</div>
+      </div>
+    );
+  }
+
+
   return (
+    <div className="min-h-screen flex flex-col">
+      {/* Модальное окно создания задачи */}
+      {isCreateModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Создать новую задачу</h2>
+              <button 
+                onClick={() => setIsCreateModalOpen(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <FiX size={24} />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Название задачи *
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  value={newTask.name}
+                  onChange={handleInputChange}
+                  className="w-full p-2 border rounded-md"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Описание
+                </label>
+                <textarea
+                  name="description"
+                  value={newTask.description}
+                  onChange={handleInputChange}
+                  className="w-full p-2 border rounded-md h-32"
+                />
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Критичность
+                  </label>
+                  <select
+                    name="criticality"
+                    value={newTask.criticality}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border rounded-md"
+                  >
+                    <option value="Низкий">Низкий</option>
+                    <option value="Средний">Средний</option>
+                    <option value="Высокий">Высокий</option>
+                    <option value="Критичный">Критичный</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Приоритет
+                  </label>
+                  <select
+                    name="priority"
+                    value={newTask.priority}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border rounded-md"
+                  >
+                    <option value="Очень низкий">Очень низкий</option>
+                    <option value="Низкий">Низкий</option>
+                    <option value="Нормальный">Нормальный</option>
+                    <option value="Высокий">Высокий</option>
+                    <option value="Очень высокий">Очень высокий</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Группа
+                  </label>
+                  <select
+                    name="groupId"
+                    value={newTask.groupId}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border rounded-md"
+                  >
+                    {groups.map(group => (
+                      <option key={group.id} value={group.id}>
+                        {group.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  onClick={() => setIsCreateModalOpen(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-100"
+                >
+                  Отмена
+                </button>
+                <button
+                  onClick={handleCreateTask}
+                  disabled={!newTask.name.trim()}
+                  className={`px-4 py-2 rounded-md text-white ${
+                    !newTask.name.trim()
+                      ? 'bg-gray-400 cursor-not-allowed'
+                      : 'bg-blue-500 hover:bg-blue-600'
+                  }`}
+                >
+                  Создать задачу
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     <div className="min-h-screen flex flex-col">
       {/* Тулбар */}
       <header className="bg-white shadow">
@@ -239,7 +414,7 @@ export default function TasksPage() {
           
           <div className="space-y-4">
             {groups.map(group => (
-              <GroupItem 
+              <GroupItem
                 key={group.id} 
                 group={group} 
                 toggleGroup={toggleGroup} 
@@ -249,17 +424,20 @@ export default function TasksPage() {
         </div>
         
         {/* Правая панель - Задачи */}
-        <div className="w-3/4 p-6 overflow-y-auto">
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h1 className="text-2xl font-bold">Все задачи</h1>
-              <p className="text-gray-600">Просмотр и управление задачами</p>
-            </div>
-            <button className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center">
-              <FiPlus className="mr-2" />
-              Новая задача
-            </button>
+      <div className="w-3/4 p-6 overflow-y-auto">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-2xl font-bold">Все задачи</h1>
+            <p className="text-gray-600">Просмотр и управление задачами</p>
           </div>
+          <button 
+            onClick={() => setIsCreateModalOpen(true)}
+            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center"
+          >
+            <FiPlus className="mr-2" />
+            Новая задача
+          </button>
+        </div>
           
           <div className="space-y-4">
             {groups.flatMap(group => 
@@ -271,5 +449,7 @@ export default function TasksPage() {
         </div>
       </main>
     </div>
+    </div>
+    
   );
 }

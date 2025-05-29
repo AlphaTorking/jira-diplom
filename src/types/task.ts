@@ -1,15 +1,18 @@
 // types/task.ts
+import { Group } from '@prisma/client';
+
 export interface Task {
-  id: number
-  name: string
-  description?: string
-  criticality: 'Низкий' | 'Средний' | 'Высокий' | 'Критичный'
-  priority: 'Очень низкий' | 'Низкий' | 'Нормальный' | 'Высокий' | 'Очень высокий'
-  status: 'Новое' | 'В работе' | 'Завершено' | 'Тестирование' | 'Код-ревью' | 'Отказ'
-  author: User
-  worker?: User
-  createDate: string
-  closeDate?: string
+  id: number;
+  name: string;
+  description: string | null;
+  criticality: string;
+  priority: string;
+  status: string;
+  author: User;
+  worker?: User | null;
+  createDate: string; // Форматированная дата
+  closeDate?: string | null; // Форматированная дата
+  group: Group;
 }
 
 interface User {
