@@ -1,0 +1,114 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum TaskCriticalityLevel {
+  Низкий
+  Средний
+  Высокий
+  Критичный
+}
+
+enum TaskPriorityLevel {
+  Очень_низкий   @map("Очень низкий")
+  Низкий
+  Нормальный
+  Высокий
+  Очень_высокий @map("Очень высокий")
+}
+
+enum TaskStatusLevel {
+  Новое
+  В_работе          @map("В работе")
+  Завершено
+  Тестирование
+  Код_ревью        @map("Код-ревью")
+  Отказ
+}
+
+model Company {
+  id     Int     @id @default(autoincrement())
+  name   String  @unique
+  phone  String  @unique
+  email  String  @unique
+  spaces Space[] @relation("CompanySpaces")
+  users  User[]  @relation("CompanyUsers")
+
+  @@map("companies")
+}
+
+model Space {
+  id        Int     @id @default(autoincrement())
+  company   Company @relation("CompanySpaces", fields: [companyId], references: [id])
+  companyId Int
+  groups    Group[] @relation("SpaceGroups")
+  teams     Team[]  @relation("SpaceTeams")
+  tasks     Task[]  @relation("SpaceTasks")
+  users     User[]  @relation("SpaceUsers")
+
+  @@map("spaces")
+}
+
+model Group {
+  id      Int    @id @default(autoincrement())
+  name    String
+  space   Space  @relation("SpaceGroups", fields: [spaceId], references: [id])
+  spaceId Int
+  tasks   Task[] @relation("GroupTasks")
+
+  @@map("groups")
+}
+
+model Team {
+  id      Int    @id @default(autoincrement())
+  space   Space  @relation("SpaceTeams", fields: [spaceId], references: [id])
+  spaceId Int
+  users   User[] @relation("TeamMembers")
+
+  @@map("teams")
+}
+
+model User {
+  id            Int     @id @default(autoincrement())
+  login         String  @unique
+  password      String
+  email         String  @unique
+  team          Team?   @relation("TeamMembers", fields: [teamId], references: [id])
+  teamId        Int?
+  company       Company @relation("CompanyUsers", fields: [companyId], references: [id])
+  companyId     Int
+  space         Space   @relation("SpaceUsers", fields: [spaceId], references: [id])
+  spaceId       Int
+  isAdmin       Boolean @default(false)
+  createdTasks  Task[]  @relation("TaskAuthor")
+  assignedTasks Task[]  @relation("TaskWorker")
+
+  @@map("users")
+}
+
+model Task {
+  id          Int                  @id @default(autoincrement())
+  name        String
+  description String?
+  criticality TaskCriticalityLevel
+  priority    TaskPriorityLevel
+  status      TaskStatusLevel      @default(Новое)
+  author      User                 @relation("TaskAuthor", fields: [authorId], references: [id])
+  authorId    Int
+  worker      User?                @relation("TaskWorker", fields: [workerId], references: [id])
+  workerId    Int?
+  createDate  DateTime             @default(now()) @map("task_create_date")
+  closeDate   DateTime?
+  result      String?              @default("Задание выполнено.")
+  group       Group?               @relation("GroupTasks", fields: [groupId], references: [id])
+  groupId     Int?
+  space       Space                @relation("SpaceTasks", fields: [spaceId], references: [id])
+  spaceId     Int
+
+  @@map("tasks")
+}
