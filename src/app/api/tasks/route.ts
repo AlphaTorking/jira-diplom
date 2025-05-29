@@ -3,8 +3,15 @@ import prisma from '../../../../lib/prismaClient'
 import { TaskPriorityLevel, TaskCriticalityLevel, TaskStatusLevel } from '@prisma/client';
 
 console.log('DATABASE_URL:', process.env.DATABASE_URL)
+console.log('Connection URL:', process.env.DATABASE_URL)
 
 export async function GET() {
+  try {
+  await prisma.$connect()
+  console.log('Database connected successfully')
+} catch (connectError) {
+  console.error('Connection error:', connectError)
+}
   try {
     const tasks = await prisma.task.findMany({
       include: {

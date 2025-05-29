@@ -1,9 +1,7 @@
-module.exports = {
-  env: {
-    DATABASE_URL: process.env.DATABASE_URL,
-  },
-  experimental: {
-    serverComponentsExternalPackages: ['@prisma/client'],
-  },
-}
+const nextConfig = {
+    serverExternalPackages: ['@prisma/client'],
+  }
+
+// next.config.js
+module.exports = nextConfig
 
