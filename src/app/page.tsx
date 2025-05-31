@@ -1,6 +1,6 @@
 // src/app/page.tsx
 "use client";
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { FiUser, FiFilter, FiPlus, FiChevronDown, FiChevronRight, FiX } from 'react-icons/fi';
 import './globals.css' 
 import TaskCard from '@/components/TaskCard';
@@ -8,12 +8,43 @@ import type { Task, Group } from '@/types/task';
 import { GroupItem } from '@/components/GroupItem';
 import { useRouter } from 'next/navigation';
 import { Router } from 'next/router';
+import { TaskStatusLevel, TaskPriorityLevel, TaskCriticalityLevel } from '@prisma/client';
+import { string } from 'zod';
+import { ObjectEnumValue } from '@prisma/client/runtime/library';
 
+interface Filters {
+  status: TaskStatusLevel[];
+  priority: TaskPriorityLevel[];
+  criticality: TaskCriticalityLevel[];
+  search: string;
+  group: number | null;
+}
 
 export default function TasksPage() {
   const router = useRouter();
   const [groups, setGroups] = useState<Group[]>([]);
   const [activeTab, setActiveTab] = useState('tasks');
+  const CRITICALITY_LABELS: Record<TaskCriticalityLevel, string> = {
+  [TaskCriticalityLevel.Низкий]: 'Низкий',
+  [TaskCriticalityLevel.Средний]: 'Средний',
+  [TaskCriticalityLevel.Высокий]: 'Высокий',
+  [TaskCriticalityLevel.Критичный]: 'Критичный'
+  };
+  const STATUS_LABELS: Record<TaskStatusLevel, string> = {
+    [TaskStatusLevel.Новое]: 'Новое',
+    [TaskStatusLevel.В_работе]: 'В работе',
+    [TaskStatusLevel.Код_ревью]: 'Код ревью',
+    [TaskStatusLevel.Тестирование]: 'Тестирование',
+    [TaskStatusLevel.Завершено]: 'Завершено',
+    [TaskStatusLevel.Отказ] :'Отказ'
+  };
+  const PRIORITY_LABELS: Record<TaskPriorityLevel, string> = {
+    [TaskPriorityLevel.Очень_низкий] : 'Очень низкий',
+    [TaskPriorityLevel.Низкий] : 'Низкий',
+    [TaskPriorityLevel.Нормальный]: 'Нормальный',
+    [TaskPriorityLevel.Высокий]: 'Высокий',
+    [TaskPriorityLevel.Очень_высокий]: 'Очень высокий'
+  };
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -22,11 +53,88 @@ export default function TasksPage() {
   const [newTask, setNewTask] = useState({
     name: '',
     description: '',
-    criticality: 'Низкий',
-    priority: 'Нормальный',
-    status: 'Новое',
+    criticality: TaskCriticalityLevel.Низкий,
+    priority: TaskPriorityLevel.Нормальный,
+    status: TaskStatusLevel.Новое,
     groupId: 1,
   });
+   const [filters, setFilters] = useState<Filters>({
+    status: [],
+    priority: [],
+    criticality: [],
+    search: '',
+    group: null
+  });
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+  // Фильтрация задач
+  const filteredGroups = useMemo(() => {
+    return groups.map(group => ({
+      ...group,
+      tasks: group.tasks.filter(task => {
+
+        const taskPriority = task.priority as TaskPriorityLevel;
+        const taskStatus = task.status as TaskStatusLevel;
+        const taskCriticality = task.criticality as TaskCriticalityLevel;
+
+        // Фильтр по статусу
+        if (filters.status.length > 0 && !filters.status.includes(taskStatus)) {
+          return false;
+        }
+        
+        // Фильтр по приоритету
+        if (filters.priority.length > 0 && !filters.priority.includes(taskPriority)) {
+          return false;
+        }
+        
+        // Фильтр по критичности
+        if (filters.criticality.length > 0 && !filters.criticality.includes(taskCriticality)) {
+          return false;
+        }
+        
+        // Фильтр по поиску
+        if (filters.search && 
+            !task.name.toLowerCase().includes(filters.search.toLowerCase()) &&
+            !task.description?.toLowerCase().includes(filters.search.toLowerCase())) {
+          return false;
+        }
+        
+        // Фильтр по группе
+        if (filters.group && task.group.id !== filters.group) {
+          return false;
+        }
+        
+        return true;
+      })
+    }));
+  }, [groups, filters]);
+
+  // Обработчики фильтров
+  const toggleStatusFilter = (status: TaskStatusLevel) => {
+    setFilters(prev => ({
+      ...prev,
+      status: prev.status.includes(status)
+        ? prev.status.filter(s => s !== status)
+        : [...prev.status, status]
+    }));
+  };
+  const togglePriorityFilter = (priority: TaskPriorityLevel) => {
+    setFilters(prev => ({
+      ...prev,
+      priority: prev.priority.includes(priority)
+        ? prev.priority.filter(s => s !== priority)
+        : [...prev.priority, priority]
+    }));
+  };
+  const toggleCriticalityFilter = (criticality: TaskCriticalityLevel) => {
+    setFilters(prev => ({
+      ...prev,
+      criticality: prev.criticality.includes(criticality)
+        ? prev.criticality.filter(s => s !== criticality)
+        : [...prev.criticality, criticality]
+    }));
+  };
+
 
   // Загрузка групп и задач
   useEffect(() => {
@@ -77,6 +185,7 @@ export default function TasksPage() {
     ));
   };
 
+  // Создание задачи
   const handleCreateTask = async () => {
     try {
       const response = await fetch('/api/tasks', {
@@ -119,9 +228,9 @@ export default function TasksPage() {
       setNewTask({
         name: '',
         description: '',
-        criticality: 'Низкий',
-        priority: 'Нормальный',
-        status: 'Новое',
+        criticality: TaskCriticalityLevel.Низкий,
+        priority: TaskPriorityLevel.Нормальный,
+        status: TaskStatusLevel.Новое,
         groupId: 1,
       });
       
@@ -289,10 +398,14 @@ export default function TasksPage() {
                     onChange={handleInputChange}
                     className="w-full p-2 border rounded-md"
                   >
-                    <option value="Низкий">Низкий</option>
-                    <option value="Средний">Средний</option>
-                    <option value="Высокий">Высокий</option>
-                    <option value="Критичный">Критичный</option>
+                    {Object.values(TaskCriticalityLevel).map(criticality => (
+                    <option 
+                      key={criticality} 
+                      value={criticality}
+                    >
+                      {CRITICALITY_LABELS[criticality]}
+                    </option>
+                  ))}
                   </select>
                 </div>
                 
@@ -306,11 +419,14 @@ export default function TasksPage() {
                     onChange={handleInputChange}
                     className="w-full p-2 border rounded-md"
                   >
-                    <option value="Очень низкий">Очень низкий</option>
-                    <option value="Низкий">Низкий</option>
-                    <option value="Нормальный">Нормальный</option>
-                    <option value="Высокий">Высокий</option>
-                    <option value="Очень высокий">Очень высокий</option>
+                    {Object.values(TaskPriorityLevel).map(priority => (
+                    <option 
+                      key={priority} 
+                      value={priority}
+                    >
+                      {PRIORITY_LABELS[priority]}
+                    </option>
+                  ))}
                   </select>
                 </div>
                 
@@ -375,9 +491,139 @@ export default function TasksPage() {
               
             </div>
             <div className="flex items-center">
-              <button className="p-2 rounded-full hover:bg-gray-100">
-                <FiFilter className="text-gray-600" />
-              </button>
+               {/* Кнопка фильтров */}
+              <div className="relative">
+                <button 
+                  onClick={() => setIsFilterOpen(!isFilterOpen)}
+                  className={`p-2 rounded-full flex items-center ${
+                    Object.values(filters).some(f => f.length > 0 || f !== '') 
+                      ? 'bg-blue-100 text-blue-600' 
+                      : 'hover:bg-gray-100'
+                  }`}
+                >
+                  <FiFilter className="mr-1" />
+                  <span>Фильтры</span>
+                </button>
+                {/* Выпадающее меню фильтров */}
+                {isFilterOpen && (
+                  <div className="absolute right-0 mt-2 w-80 bg-white shadow-xl rounded-lg z-50 p-4">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="font-bold">Фильтры задач</h3>
+                      <button onClick={() => setIsFilterOpen(false)}>
+                        <FiX />
+                      </button>
+                    </div>
+                    
+                    {/* Поиск */}
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium mb-1">Поиск</label>
+                      <input
+                        type="text"
+                        placeholder="Название или описание"
+                        value={filters.search}
+                        onChange={e => setFilters({...filters, search: e.target.value})}
+                        className="w-full p-2 border rounded-md"
+                      />
+                    </div>
+                    
+                    {/* Фильтр по группам */}
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium mb-1">Группа</label>
+                      <select
+                        value={filters.group || ''}
+                        onChange={e => setFilters({
+                          ...filters, 
+                          group: e.target.value ? Number(e.target.value) : null
+                        })}
+                        className="w-full p-2 border rounded-md"
+                      >
+                        <option value="">Все группы</option>
+                        {groups.map(group => (
+                          <option key={group.id} value={group.id}>
+                            {group.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    
+                    {/* Фильтр по статусу */}
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium mb-1">Статус</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {Object.entries(STATUS_LABELS).map(([enumValue, displayName]) => (
+                          <button
+                            key={enumValue}
+                            onClick={() => toggleStatusFilter(enumValue as TaskStatusLevel)}
+                            className={`px-3 py-1 rounded-full text-xs ${
+                              filters.status.includes(enumValue as TaskStatusLevel)
+                                ? 'bg-blue-500 text-white'
+                                : 'bg-gray-100 hover:bg-gray-200'
+                            }`}
+                          >
+                            {displayName}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    {/* Фильтр по приоритету */}
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium mb-1">Приоритет</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {Object.entries(PRIORITY_LABELS).map(([enumValue, displayName]) => (
+                          <button
+                            key={enumValue}
+                            onClick={() => togglePriorityFilter(enumValue as TaskPriorityLevel)}
+                            className={`px-3 py-1 rounded-full text-xs ${
+                              filters.priority.includes(enumValue as TaskPriorityLevel)
+                                ? 'bg-blue-500 text-white'
+                                : 'bg-gray-100 hover:bg-gray-200'
+                            }`}
+                          >
+                            {displayName}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    {/* Фильтр по критичности */}
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Критичность</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {Object.entries(CRITICALITY_LABELS).map(([enumValue,displayName]) => (
+                          <button
+                            key={enumValue}
+                            onClick={() => toggleCriticalityFilter(enumValue as TaskCriticalityLevel)}
+                            className={`px-3 py-1 rounded-full text-xs ${
+                              filters.criticality.includes(enumValue as TaskCriticalityLevel)
+                                ? 'bg-blue-500 text-white'
+                                : 'bg-gray-100 hover:bg-gray-200'
+                            }`}
+                          >
+                            {displayName}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    {/* Кнопка сброса */}
+                    <div className="mt-4">
+                      <button
+                        onClick={() => setFilters({
+                          status: [],
+                          priority: [],
+                          criticality: [],
+                          search: '',
+                          group: null
+                        })}
+                        className="w-full py-2 text-blue-500 border border-blue-500 rounded-md hover:bg-blue-50"
+                      >
+                        Сбросить фильтры
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
               <button className="ml-2 p-2 rounded-full hover:bg-gray-100">
                 <FiPlus className="text-gray-600" />
               </button>
@@ -438,10 +684,29 @@ export default function TasksPage() {
         </div>
           
           <div className="space-y-4">
-            {groups.flatMap(group => 
+            {filteredGroups.flatMap(group => 
               group.isOpen ? group.tasks.map(task => (
                 <TaskCard key={task.id} task={task} />
               )) : []
+            )}
+            
+            {filteredGroups.flatMap(g => g.tasks).length === 0 && (
+              <div className="text-center py-10 text-gray-500">
+                <FiFilter className="mx-auto text-3xl mb-2" />
+                <p>Задачи не найдены по выбранным фильтрам</p>
+                <button 
+                  onClick={() => setFilters({
+                    status: [],
+                    priority: [],
+                    criticality: [],
+                    search: '',
+                    group: null
+                  })}
+                  className="mt-2 text-blue-500 hover:underline"
+                >
+                  Сбросить фильтры
+                </button>
+              </div>
             )}
           </div>
         </div>

@@ -1,19 +1,29 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { FiArrowLeft, FiEdit, FiSave, FiUser, FiX } from 'react-icons/fi';
-import { useRouter } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import type { User } from '@/types/users';
 import type { Task } from '@/types/task';
+import './globals.css' 
 
-export default function TaskDetail({ params }: { params: { taskId: string } }) {
+// Тип для фильтров
+interface Filters {
+  status: string[];
+  priority: string[];
+  criticality: string[];
+  search: string;
+  group: number | null;
+}
+
+export default function TaskDetail() {
+  const params = useParams();
   const router = useRouter();
   const [task, setTask] = useState<Task | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [users, setUsers] = useState<User[]>([]);
-  
   // Состояния для редактирования
   const [editedTask, setEditedTask] = useState({
     status: '',
@@ -27,13 +37,13 @@ export default function TaskDetail({ params }: { params: { taskId: string } }) {
       try {
         setIsLoading(true);
         
-        // Загружаем задачу - ИСПРАВЛЕНО: убрана лишняя кавычка в URL
+        // Загружаем задачу 
         const taskRes = await fetch(`/api/tasks/${params.taskId}`);
         if (!taskRes.ok) throw new Error('Ошибка загрузки задачи');
         const taskData = await taskRes.json();
         setTask(taskData);
         
-        // Устанавливаем значения для редактирования - ИСПРАВЛЕНО: безопасное обращение
+        // Устанавливаем значения для редактирования 
         setEditedTask({
           status: taskData.status || '',
           workerId: (taskData.worker?.id?.toString()) || '',
@@ -55,7 +65,7 @@ export default function TaskDetail({ params }: { params: { taskId: string } }) {
     };
     
     fetchData();
-  }, [params.taskId]); // ИСПРАВЛЕНО: убрана опциональная цепочка
+  }, [params.taskId]); 
 
   // Обработка сохранения изменений
   const handleSave = async () => {
@@ -67,7 +77,6 @@ export default function TaskDetail({ params }: { params: { taskId: string } }) {
           status: editedTask.status,
           workerId: editedTask.workerId ? Number(editedTask.workerId) : null,
           result: editedTask.result,
-          // ИСПРАВЛЕНО: безопасная установка даты завершения
           closeDate: editedTask.status === 'Завершено' && task?.status !== 'Завершено' 
             ? new Date().toISOString() 
             : task?.closeDate
@@ -75,7 +84,6 @@ export default function TaskDetail({ params }: { params: { taskId: string } }) {
       });
       
       if (!response.ok) {
-        // ИСПРАВЛЕНО: получение детальной ошибки с сервера
         const errorData = await response.json();
         throw new Error(errorData.error || 'Ошибка обновления задачи');
       }
@@ -87,11 +95,10 @@ export default function TaskDetail({ params }: { params: { taskId: string } }) {
       
     } catch (err) {
       console.error('Ошибка обновления:', err);
-      //setError(err.message || 'Не удалось обновить задачу');
     }
   };
 
-  // Функция для форматирования даты - ИСПРАВЛЕНО: добавлен форматтер
+  // Функция для форматирования даты 
   const formatDate = (dateString: string | Date) => {
     if (!dateString) return 'Нет даты';
     const date = new Date(dateString);
@@ -127,7 +134,6 @@ export default function TaskDetail({ params }: { params: { taskId: string } }) {
     );
   }
 
-  // ИСПРАВЛЕНО: обработка случая, когда задача не загружена
   if (!task) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -279,14 +285,12 @@ export default function TaskDetail({ params }: { params: { taskId: string } }) {
                 
                 <div>
                   <label className="block text-sm text-gray-500">Дата создания</label>
-                  {/* ИСПРАВЛЕНО: форматирование даты */}
                   <p className="font-medium">{formatDate(task.createDate)}</p>
                 </div>
                 
                 {task.closeDate && (
                   <div>
                     <label className="block text-sm text-gray-500">Дата завершения</label>
-                    {/* ИСПРАВЛЕНО: форматирование даты */}
                     <p className="font-medium">{formatDate(task.closeDate)}</p>
                   </div>
                 )}

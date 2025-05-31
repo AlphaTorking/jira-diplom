@@ -16,16 +16,6 @@
       "static/chunks/main-app.js",
       "static/chunks/app/api/groups/route.js"
     ],
-    "/api/tasks/route": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/api/tasks/route.js"
-    ],
-    "/profile/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/profile/page.js"
-    ],
     "/tasks/[taskId]/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
