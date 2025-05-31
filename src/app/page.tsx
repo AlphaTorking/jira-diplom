@@ -2,116 +2,23 @@
 "use client";
 import { useEffect, useState } from 'react';
 import { FiUser, FiFilter, FiPlus, FiChevronDown, FiChevronRight, FiX } from 'react-icons/fi';
-import './globals.css'
+import './globals.css' 
+import TaskCard from '@/components/TaskCard';
+import type { Task, Group } from '@/types/task';
+import { GroupItem } from '@/components/GroupItem';
+import { useRouter } from 'next/navigation';
+import { Router } from 'next/router';
 
-// Типы данных (адаптированные под Prisma)
-interface Task {
-  id: number;
-  name: string;
-  description: string | null;
-  criticality: string;
-  priority: string;
-  status: string;
-  author: { id: number; login: string };
-  worker?: { id: number; login: string } | null;
-  createDate: Date;
-  closeDate?: Date | null;
-  group: { id: number; name: string };
-}
-
-interface Group {
-  id: number;
-  name: string;
-  tasks: Task[];
-  isOpen: boolean;
-}
-
-// Компонент карточки задачи
-function TaskCard({ task }: { task: Task }) {
-  const statusColors: Record<string, string> = {
-    'Новое': 'bg-blue-200',
-    'В работе': 'bg-yellow-200',
-    'Завершено': 'bg-green-200',
-    'Тестирование': 'bg-purple-200',
-    'Код-ревью': 'bg-orange-200',
-    'Отказ': 'bg-red-200'
-  };
-
-  return (
-    <div className="border rounded-lg p-4 mb-4 shadow-sm hover:shadow-md transition-shadow">
-      <div className="flex justify-between items-start">
-        <div>
-          <h3 className="font-semibold text-lg">{task.name}</h3>
-          <p className="text-gray-600 mt-1">{task.description}</p>
-          
-          <div className="flex flex-wrap gap-2 mt-3">
-            <span className={`px-2 py-1 rounded-full text-xs ${statusColors[task.status]}`}>
-              {task.status}
-            </span>
-            <span className="px-2 py-1 rounded-full text-xs bg-gray-100">
-              Приоритет: {task.priority}
-            </span>
-            <span className="px-2 py-1 rounded-full text-xs bg-gray-100">
-              Критичность: {task.criticality}
-            </span>
-          </div>
-        </div>
-        
-        <div className="bg-gray-200 border-2 border-dashed rounded-xl w-16 h-16" />
-      </div>
-      
-      <div className="mt-4 pt-2 border-t border-gray-100 flex justify-between text-sm">
-        <div>
-          <p>Автор: <span className="font-medium">{task.author.login}</span></p>
-          {task.worker && <p>Исполнитель: <span className="font-medium">{task.worker.login}</span></p>}
-        </div>
-        <div className="text-right">
-          <p>Создана: {task.createDate.toString()}</p>
-          {task.closeDate && <p>Завершена: {task.closeDate.toString()}</p>}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Компонент группы задач
-function GroupItem({ group, toggleGroup }: { 
-  group: Group; 
-  toggleGroup: (id: number) => void 
-}) {
-  return (
-    <div className="mb-4">
-      <div 
-        className="flex items-center justify-between p-3 bg-gray-100 rounded-lg cursor-pointer hover:bg-gray-200"
-        onClick={() => toggleGroup(group.id)}
-      >
-        <div className="flex items-center">
-          {group.isOpen ? <FiChevronDown className="mr-2" /> : <FiChevronRight className="mr-2" />}
-          <h3 className="font-semibold">{group.name}</h3>
-        </div>
-        <span className="bg-blue-500 text-white rounded-full px-2 py-1 text-xs">
-          {group.tasks.length}
-        </span>
-      </div>
-      
-      {group.isOpen && (
-        <div className="mt-2 ml-4">
-          {group.tasks.map(task => (
-            <TaskCard key={task.id} task={task} />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 export default function TasksPage() {
+  const router = useRouter();
   const [groups, setGroups] = useState<Group[]>([]);
   const [activeTab, setActiveTab] = useState('tasks');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isGroupModalOpen, setIsGroupModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+  const [newGroupName, setNewGroupName] = useState('');
   const [newTask, setNewTask] = useState({
     name: '',
     description: '',
@@ -158,6 +65,11 @@ export default function TasksPage() {
     
     fetchData();
   }, []);
+
+  if (activeTab === 'profile'){
+    router.push('/profile');
+    return null;
+  }
 
   const toggleGroup = (groupId: number) => {
     setGroups(groups.map(group => 
@@ -241,9 +153,90 @@ export default function TasksPage() {
       </div>
     );
   }
+   // Создание группы
+  const handleCreateGroup = async () => {
+    try {
+      const response = await fetch('/api/groups', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newGroupName })
+      });
+      
+      if (!response.ok) throw new Error('Ошибка создания группы');
+      
+      const newGroup = await response.json();
+      
+      setGroups([
+        ...groups,
+        {
+          ...newGroup,
+          isOpen: true,
+          tasks: []
+        }
+      ]);
+      
+      setIsGroupModalOpen(false);
+      setNewGroupName('');
+      
+    } catch (err) {
+      console.error('Ошибка создания группы:', err);
+      setError('Не удалось создать группу');
+    }
+  };
 
 
   return (
+
+     <div className="min-h-screen flex flex-col">
+      {/* Модальное окно создания группы */}
+      {isGroupModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Создать новую группу</h2>
+              <button onClick={() => setIsGroupModalOpen(false)}>
+                <FiX size={24} />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Название группы *
+                </label>
+                <input
+                  type="text"
+                  value={newGroupName}
+                  onChange={(e) => setNewGroupName(e.target.value)}
+                  className="w-full p-2 border rounded-md"
+                  required
+                />
+              </div>
+              
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  onClick={() => setIsGroupModalOpen(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-100"
+                >
+                  Отмена
+                </button>
+                <button
+                  onClick={handleCreateGroup}
+                  disabled={!newGroupName.trim()}
+                  className={`px-4 py-2 rounded-md text-white ${
+                    !newGroupName.trim()
+                      ? 'bg-gray-400 cursor-not-allowed'
+                      : 'bg-green-500 hover:bg-green-600'
+                  }`}
+                >
+                  Создать группу
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
     <div className="min-h-screen flex flex-col">
       {/* Модальное окно создания задачи */}
       {isCreateModalOpen && (
@@ -258,7 +251,6 @@ export default function TasksPage() {
                 <FiX size={24} />
               </button>
             </div>
-            
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -380,8 +372,8 @@ export default function TasksPage() {
               >
                 Задачи
               </button>
+              
             </div>
-            
             <div className="flex items-center">
               <button className="p-2 rounded-full hover:bg-gray-100">
                 <FiFilter className="text-gray-600" />
@@ -390,11 +382,15 @@ export default function TasksPage() {
                 <FiPlus className="text-gray-600" />
               </button>
               <button 
-                className="ml-4 flex items-center text-sm rounded-full focus:outline-none"
+                className={`ml-4 px-4 border-b-2 font-medium flex items-center ${
+                  activeTab === 'profile' 
+                    ? 'border-blue-500 text-blue-600' 
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
                 onClick={() => setActiveTab('profile')}
               >
                 <FiUser className="mr-2" />
-                <span>Профиль</span>
+                Профиль 
               </button>
             </div>
           </div>
@@ -407,11 +403,13 @@ export default function TasksPage() {
         <div className="w-1/4 bg-white border-r p-6 overflow-y-auto">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-bold">Группы задач</h2>
-            <button className="text-blue-500 hover:text-blue-700">
-              <FiPlus />
+            <button 
+              onClick={() => setIsGroupModalOpen(true)}
+              className="text-green-500 hover:text-green-700"
+            >
+              <FiPlus size={20} />
             </button>
           </div>
-          
           <div className="space-y-4">
             {groups.map(group => (
               <GroupItem
@@ -423,7 +421,7 @@ export default function TasksPage() {
           </div>
         </div>
         
-        {/* Правая панель - Задачи */}
+      {/* Правая панель - Задачи */}
       <div className="w-3/4 p-6 overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
           <div>
@@ -450,6 +448,6 @@ export default function TasksPage() {
       </main>
     </div>
     </div>
-    
+    </div>
   );
 }

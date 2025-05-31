@@ -35,3 +35,30 @@ export async function GET() {
     );
   }
 }
+export async function POST(req: Request) {
+  try {
+    const { name, spaceId = 1 } = await req.json(); // spaceId временно фиксирован
+    
+    if (!name) {
+      return NextResponse.json(
+        { error: 'Название группы обязательно' },
+        { status: 400 }
+      );
+    }
+
+    const newGroup = await prisma.group.create({
+      data: {
+        name,
+        spaceId: Number(spaceId)
+      }
+    });
+    
+    return NextResponse.json(newGroup, { status: 201 });
+  } catch (error) {
+    console.error('Error creating group:', error);
+    return NextResponse.json(
+      { error: 'Ошибка создания группы' },
+      { status: 500 }
+    );
+  }
+}
