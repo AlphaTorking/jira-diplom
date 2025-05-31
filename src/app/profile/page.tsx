@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { FiUser, FiMail, FiPhone, FiLogOut, FiSave } from 'react-icons/fi';
 import { useRouter } from 'next/navigation';
+import '@/app/globals.css'
 
 export default function ProfilePage() {
   const router = useRouter();

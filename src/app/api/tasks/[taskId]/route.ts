@@ -1,17 +1,31 @@
 import { NextResponse } from 'next/server';
 import prisma from 'lib/prismaClient';
 
-export async function GET(req: Request, { params }: { params: { taskId: string } }) {
+export async function GET(
+  request: Request,
+  { params }: { params: { taskId: string } }
+) {
   try {
+    // Используем await для получения значения taskId
+    const taskId = await params.taskId;
+    
+    if (!taskId) {
+      return NextResponse.json(
+        { error: 'Task ID is required' },
+        { status: 400 }
+      );
+    }
+
     const task = await prisma.task.findUnique({
-      where: { id: Number(params.taskId) },
+      where: { id: Number(taskId) },
       include: {
         author: true,
         worker: true,
-        group: true
+        group: true,
+        space: true
       }
     });
-    
+
     if (!task) {
       return NextResponse.json(
         { error: 'Задача не найдена' },

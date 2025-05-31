@@ -5,7 +5,7 @@ import { FiArrowLeft, FiEdit, FiSave, FiUser, FiX } from 'react-icons/fi';
 import { useParams, useRouter } from 'next/navigation';
 import type { User } from '@/types/users';
 import type { Task } from '@/types/task';
-import './globals.css' 
+import '../../globals.css'  
 
 // Тип для фильтров
 interface Filters {

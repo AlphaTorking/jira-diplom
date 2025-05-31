@@ -1,7 +1,8 @@
 {
-  "/api/groups/route": "app/api/groups/route.js",
-  "/api/tasks/[taskId]/route": "app/api/tasks/[taskId]/route.js",
   "/api/users/route": "app/api/users/route.js",
+  "/api/tasks/[taskId]/route": "app/api/tasks/[taskId]/route.js",
+  "/api/groups/route": "app/api/groups/route.js",
   "/page": "app/page.js",
-  "/tasks/[taskId]/page": "app/tasks/[taskId]/page.js"
+  "/tasks/[taskId]/page": "app/tasks/[taskId]/page.js",
+  "/profile/page": "app/profile/page.js"
 }
