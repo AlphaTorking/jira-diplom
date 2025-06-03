@@ -1,11 +1,29 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prismaClient';
+<<<<<<< HEAD
 import { getSession } from '@/lib/session';
+=======
+import { getCurrentUser } from '@/lib/authUtils';
+>>>>>>> 862663a (Модуль Авторизации, Сохранение Сессиии. Добавлено Хэширование и jwt-токены)
 
 export async function GET(req: Request, { params }: { params: { taskId: string } }) {
   try {
+<<<<<<< HEAD
     const session = await getSession();
     if (!session?.user) {
+=======
+    const userId = await getCurrentUser(request);
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'Не авторизован' },
+        { status: 401 }
+      );
+    }
+
+    const taskId = params.taskId;
+    
+    if (!taskId) {
+>>>>>>> 862663a (Модуль Авторизации, Сохранение Сессиии. Добавлено Хэширование и jwt-токены)
       return NextResponse.json(
         { error: 'Требуется аутентификация' },
         { status: 401 }
@@ -13,7 +31,18 @@ export async function GET(req: Request, { params }: { params: { taskId: string }
     }
     
     const task = await prisma.task.findUnique({
+<<<<<<< HEAD
       where: { id: parseInt(params.taskId) },
+=======
+      where: { 
+        id: Number(taskId),
+        // Проверяем принадлежность задачи пользователю
+        OR: [
+          { authorId: userId },
+          { workerId: userId }
+        ]
+      },
+>>>>>>> 862663a (Модуль Авторизации, Сохранение Сессиии. Добавлено Хэширование и jwt-токены)
       include: {
         author: true,
         worker: true,
@@ -21,7 +50,10 @@ export async function GET(req: Request, { params }: { params: { taskId: string }
         space: true
       }
     });
+<<<<<<< HEAD
     
+=======
+>>>>>>> 862663a (Модуль Авторизации, Сохранение Сессиии. Добавлено Хэширование и jwt-токены)
     if (!task) {
       return NextResponse.json(
         { error: 'Задача не найдена' },
@@ -49,6 +81,7 @@ export async function GET(req: Request, { params }: { params: { taskId: string }
 
 export async function PUT(req: Request, { params }: { params: { taskId: string } }) {
   try {
+<<<<<<< HEAD
     const session = await getSession();
     if (!session?.user) {
       return NextResponse.json(
@@ -56,6 +89,16 @@ export async function PUT(req: Request, { params }: { params: { taskId: string }
         { status: 401 }
       );
     }
+=======
+    const userId = await getCurrentUser(req);
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'Не авторизован' },
+        { status: 401 }
+      );
+    }
+    const body = await req.json();
+>>>>>>> 862663a (Модуль Авторизации, Сохранение Сессиии. Добавлено Хэширование и jwt-токены)
     
     const taskId = parseInt(params.taskId);
     const { 

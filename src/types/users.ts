@@ -1,6 +1,8 @@
 
 export interface User {
-  id: number
-  login: string
-  email: string
+  id: number;
+  login: string;
+  email: string;
+  isAdmin: boolean;
+  spaceID: number;
 }

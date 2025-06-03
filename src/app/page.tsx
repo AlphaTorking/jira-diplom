@@ -8,6 +8,8 @@ import type { Task, Group } from '@/types/task';
 import { GroupItem } from '@/components/GroupItem';
 import { useRouter } from 'next/navigation';
 import { TaskStatusLevel, TaskPriorityLevel, TaskCriticalityLevel } from '@prisma/client';
+import { useAuth } from '@/components/AuthProvider';
+import prisma from '@/lib/prismaClient';
 
 interface Filters {
   status: TaskStatusLevel[];
@@ -19,6 +21,7 @@ interface Filters {
 
 export default function TasksPage() {
   const router = useRouter();
+  const { getAccessToken } = useAuth(); // Получаем функцию для доступа к токену
   const [groups, setGroups] = useState<Group[]>([]);
   const [activeTab, setActiveTab] = useState('tasks');
   const CRITICALITY_LABELS: Record<TaskCriticalityLevel, string> = {
@@ -145,7 +148,20 @@ export default function TasksPage() {
     const fetchData = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch('/api/groups');
+      
+      // Получаем токен
+      const accessToken = getAccessToken();
+      
+      if (!accessToken) {
+        setError('Пользователь не авторизован');
+        return;
+      }
+      
+      const response = await fetch('/api/groups', {
+        headers: {
+          'Authorization': `Bearer ${accessToken}` // Добавляем токен в заголовок
+        }
+      });
         
         if (!response.ok) {
           throw new Error('Ошибка загрузки данных');
@@ -191,40 +207,51 @@ export default function TasksPage() {
   // Создание задачи
   const handleCreateTask = async () => {
     try {
-      const response = await fetch('/api/tasks', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(newTask)
-      });
+      const accessToken = getAccessToken();
+
+  
+    
+    // Проверка обязательных полей
+    if (!newTask.name.trim()) {
+      setError('Название задачи обязательно');
+      return;
+    }
+
+    const response = await fetch('/api/tasks', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`
+      },
+      body: JSON.stringify(newTask)
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Error response:', errorData);
+      setError(errorData.error || 'Ошибка создания задачи');
+      return;
+    }
+    
+    const createdTask = await response.json();
+    console.log('Created task response:', createdTask);
       
-      if (!response.ok) {
-        throw new Error('Ошибка создания задачи');
+     // Обновляем группы с новой задачей
+    setGroups(groups.map(group => {
+      if (group.id === newTask.groupId) {
+        return {
+          ...group,
+          tasks: [...group.tasks, {
+            ...createdTask,
+            createDate: new Date(createdTask.createDate).toLocaleDateString('ru-RU'),
+            closeDate: createdTask.closeDate 
+              ? new Date(createdTask.closeDate).toLocaleDateString('ru-RU') 
+              : null
+          }]
+        };
       }
-      
-      const createdTask = await response.json();
-      
-      // Форматируем даты для отображения
-      const formattedTask = {
-        ...createdTask,
-        createDate: new Date(createdTask.createDate).toLocaleDateString('ru-RU'),
-        closeDate: createdTask.closeDate 
-          ? new Date(createdTask.closeDate).toLocaleDateString('ru-RU') 
-          : null,
-        group: groups.find(g => g.id === createdTask.groupId)
-      };
-      
-      // Обновляем группы с новой задачей
-      setGroups(groups.map(group => {
-        if (group.id === newTask.groupId) {
-          return {
-            ...group,
-            tasks: [...group.tasks, formattedTask]
-          };
-        }
-        return group;
-      }));
+      return group;
+    }));
       
       // Закрываем модальное окно и сбрасываем форму
       setIsCreateModalOpen(false);

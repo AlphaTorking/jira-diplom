@@ -1,23 +1,43 @@
-import { NextResponse } from 'next/server';
-import prisma from '@/lib/prismaClient';
-import { getSession } from '@/lib/session';
+import { NextResponse } from 'next/server'
+import prisma from '@/lib/prismaClient'
+import { TaskPriorityLevel, TaskCriticalityLevel, TaskStatusLevel } from '@prisma/client';
+import { getCurrentUser } from '@/lib/authUtils'; 
 
 export async function GET(req: Request) {
   try {
-    const session = await getSession();
-    if (!session?.user) {
+    const userId = await getCurrentUser(req);
+    const body = await req.json();
+    console.log('Request Body:', body); // Добавим лог для отладки
+    if (!userId) {
       return NextResponse.json(
-        { error: 'Требуется аутентификация' },
+        { error: 'Не авторизован' },
         { status: 401 }
       );
     }
     
+    if (!body.name) {
+      return NextResponse.json(
+        { error: 'Название задачи обязательно' },
+        { status: 400 }
+      );
+    }
+
+    // Получаем пространство пользователя
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { spaceId: true }
+    });
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Пользователь не найден' },
+        { status: 404 }
+      );
+    }
+
     const tasks = await prisma.task.findMany({
-      where: { 
-        OR: [
-          { authorId: session.user.id },
-          { workerId: session.user.id }
-        ]
+      where: {
+        spaceId: user.spaceId // Фильтруем по пространству
       },
       include: {
         author: true,
@@ -40,8 +60,31 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const session = await getSession();
-    if (!session?.user) {
+    const userId = await getCurrentUser(req);
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'Не авторизован' },
+        { status: 401 }
+      );
+    }
+
+    // Получаем данные пользователя
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { spaceId: true, companyId: true }
+    });
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Пользователь не найден' },
+        { status: 404 }
+      );
+    }
+
+    const body = await req.json();
+    
+    // Валидация данных
+    if (!body.name || !body.groupId) {
       return NextResponse.json(
         { error: 'Требуется аутентификация' },
         { status: 401 }
@@ -59,16 +102,15 @@ export async function POST(req: Request) {
     
     const newTask = await prisma.task.create({
       data: {
-        name,
-        description: description || '',
-        criticality,
-        priority,
-        status: 'Новое',
-        authorId: session.user.id,
-        workerId: workerId ? parseInt(workerId) : null,
-        groupId: parseInt(groupId),
-        spaceId: session.user.spaceId, 
-        createDate: new Date()
+        name: body.name,
+        description: body.description,
+        criticality: body.criticality as TaskCriticalityLevel,
+        priority: body.priority as TaskPriorityLevel,
+        status: body.status as TaskStatusLevel,
+        authorId: userId, // Используем ID текущего пользователя
+        groupId: Number(body.groupId),
+        spaceId: user.spaceId, // Используем пространство пользователя
+        createDate: new Date(),
       },
       include: {
         author: true,

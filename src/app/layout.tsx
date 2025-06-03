@@ -1,27 +1,17 @@
-// app/layout.tsx
-import { SessionProvider } from './SessionProvider';
-import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
 import './globals.css';
+import { ReactNode } from 'react';
+import {AuthProvider} from '@/components/AuthProvider';
 
-const inter = Inter({ subsets: ['latin'] });
-
-export const metadata: Metadata = {
-  title: 'Task Hunter',
-  description: 'Упрощенный аналог Jira',
+export const metadata = {
+  title: 'TaskHunter',
+  description: 'Система управления задачами',
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="ru">
-      <body className={inter.className}>
-        <SessionProvider>
-          {children}
-        </SessionProvider>
+      <body>
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );

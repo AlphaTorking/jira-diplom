@@ -87,6 +87,7 @@ model User {
   isAdmin       Boolean @default(false)
   createdTasks  Task[]  @relation("TaskAuthor")
   assignedTasks Task[]  @relation("TaskWorker")
+  refreshToken String?
 
   @@map("users")
 }

@@ -3,12 +3,13 @@
 import { useState, useEffect } from 'react';
 import { FiUser, FiMail, FiPhone, FiLogOut, FiSave, FiSettings } from 'react-icons/fi';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/components/AuthProvider';
 import '@/app/globals.css'
 import { useSession } from '@/app/SessionProvider';
 
 export default function ProfilePage() {
   const router = useRouter();
-  const [user, setUser] = useState<any>(null);
+  const {user, logout } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [formData, setFormData] = useState({
@@ -19,55 +20,65 @@ export default function ProfilePage() {
   });
   const isAdmin = user?.isAdmin || true;
 
+  const handleLogout = () =>{
+    logout();
+  };
+
   // Загрузка данных пользователя
   useEffect(() => {
-    // В реальном приложении здесь будет запрос к API
-    const mockUser = {
-      id: 1,
-      name: 'Иван Иванов',
-      email: 'ivanov@example.com',
-      phone: '+7 912 345-67-89',
-      company: 'ООО "ТехноПрогресс"',
-      role: 'Администратор',
-      createdAt: '2023-01-15',
-    };
-    
-    setTimeout(() => {
-      setUser(mockUser);
+    if (user) {
       setFormData({
-        name: mockUser.name,
-        email: mockUser.email,
-        phone: mockUser.phone,
-        company: mockUser.company
+        name: user.login,
+        email: user.email,
+        phone: '+7 912 345-67-89', // Временное значение
+        company: 'ООО "ТехноПрогресс"', // Временное значение
       });
-      setIsLoading(false);
-    }, 500);
-  }, []);
+    }
+    setIsLoading(false);
+  }, [user]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSave = () => {
-    // Здесь будет запрос на обновление данных
-    console.log('Сохранение данных:', formData);
-    setIsEditing(false);
-    // В реальном приложении: 
-    // fetch('/api/profile', { method: 'PUT', body: JSON.stringify(formData) })
-  };
+  const handleSave = async () => {
+  try {
+    const response = await fetch('/api/profile', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(formData)
+    });
 
-  const handleLogout = () => {
-    // Очистка данных сессии/токена
-    localStorage.removeItem('authToken');
-    // Перенаправление на страницу входа
-    router.push('/login');
-  };
+    if (response.ok) {
+      setIsEditing(false);
+    } else {
+      console.error('Ошибка сохранения профиля');
+    }
+  } catch (error) {
+    console.error('Ошибка сети:', error);
+  }
+};
 
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-2xl">Загрузка профиля...</div>
+      </div>
+    );
+  }
+
+  // Если пользователь не авторизован
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-2xl text-red-500">Пользователь не авторизован</div>
+        <button 
+          onClick={() => router.push('/login')}
+          className="ml-4 flex items-center text-blue-500 hover:text-blue-700"
+        >
+          Войти
+        </button>
       </div>
     );
   }
@@ -102,8 +113,8 @@ export default function ProfilePage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="md:col-span-1 flex flex-col items-center">
                 <div className="bg-gray-200 border-2 border-dashed rounded-full w-32 h-32 mb-4" />
-                <h2 className="text-xl font-semibold">{user.name}</h2>
-                <p className="text-gray-600">{user.role}</p>
+                <h2 className="text-xl font-semibold">{formData.name}</h2>
+                <p className="text-gray-600">{user.isAdmin ? 'Администратор' : 'Пользователь'}</p>
               </div>
               
               <div className="md:col-span-2">
@@ -198,7 +209,7 @@ export default function ProfilePage() {
                       <FiUser className="text-gray-400 mr-3" />
                       <div>
                         <p className="text-sm text-gray-500">ФИО</p>
-                        <p className="font-medium">{user.name}</p>
+                        <p className="font-medium">{formData.name}</p>
                       </div>
                     </div>
                     
@@ -206,7 +217,7 @@ export default function ProfilePage() {
                       <FiMail className="text-gray-400 mr-3" />
                       <div>
                         <p className="text-sm text-gray-500">Email</p>
-                        <p className="font-medium">{user.email}</p>
+                        <p className="font-medium">{formData.email}</p>
                       </div>
                     </div>
                     
@@ -214,24 +225,24 @@ export default function ProfilePage() {
                       <FiPhone className="text-gray-400 mr-3" />
                       <div>
                         <p className="text-sm text-gray-500">Телефон</p>
-                        <p className="font-medium">{user.phone}</p>
+                        <p className="font-medium">{formData.phone}</p>
                       </div>
                     </div>
                     
                     <div>
                       <p className="text-sm text-gray-500">Компания</p>
-                      <p className="font-medium">{user.company}</p>
+                      <p className="font-medium">{formData.company}</p>
                     </div>
                     
                     <div className="grid grid-cols-2 gap-4 mt-6">
                       <div>
                         <p className="text-sm text-gray-500">Роль</p>
-                        <p className="font-medium">{user.role}</p>
+                        <p className="font-medium">{user.isAdmin ? 'Администратор' : 'Пользователь'}</p>
                       </div>
                       
                       <div>
                         <p className="text-sm text-gray-500">Дата регистрации</p>
-                        <p className="font-medium">{user.createdAt}</p>
+                        <p className="font-medium">01-02-2025</p>
                       </div>
                     </div>
                     
