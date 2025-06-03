@@ -7,10 +7,7 @@ import TaskCard from '@/components/TaskCard';
 import type { Task, Group } from '@/types/task';
 import { GroupItem } from '@/components/GroupItem';
 import { useRouter } from 'next/navigation';
-import { Router } from 'next/router';
 import { TaskStatusLevel, TaskPriorityLevel, TaskCriticalityLevel } from '@prisma/client';
-import { string } from 'zod';
-import { ObjectEnumValue } from '@prisma/client/runtime/library';
 
 interface Filters {
   status: TaskStatusLevel[];
@@ -66,6 +63,7 @@ export default function TasksPage() {
     group: null
   });
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   // Фильтрация задач
   const filteredGroups = useMemo(() => {
@@ -135,6 +133,12 @@ export default function TasksPage() {
     }));
   };
 
+  useEffect(() => {
+    if (activeTab === 'profile') {
+      setIsRedirecting(true);
+      router.push('/profile');
+    }
+  }, [activeTab, router]);
 
   // Загрузка групп и задач
   useEffect(() => {
@@ -152,7 +156,7 @@ export default function TasksPage() {
         // Добавляем состояние isOpen для каждой группы
         const groupsWithState = data.map((group: any) => ({
           ...group,
-          isOpen: true,
+          isOpen: false,
           tasks: group.tasks.map((task: any) => ({
             ...task,
             createDate: new Date(task.createDate).toLocaleDateString('ru-RU'),
@@ -174,9 +178,8 @@ export default function TasksPage() {
     fetchData();
   }, []);
 
-  if (activeTab === 'profile'){
-    router.push('/profile');
-    return null;
+  if (isRedirecting) {
+    return <div className="text-center py-8">Перенаправление на профиль...</div>;
   }
 
   const toggleGroup = (groupId: number) => {

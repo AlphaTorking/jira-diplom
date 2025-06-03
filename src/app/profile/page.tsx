@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { FiUser, FiMail, FiPhone, FiLogOut, FiSave } from 'react-icons/fi';
+import { FiUser, FiMail, FiPhone, FiLogOut, FiSave, FiSettings } from 'react-icons/fi';
 import { useRouter } from 'next/navigation';
 import '@/app/globals.css'
+import { useSession } from '@/app/SessionProvider';
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -16,6 +17,7 @@ export default function ProfilePage() {
     phone: '',
     company: ''
   });
+  const isAdmin = user?.isAdmin || true;
 
   // Загрузка данных пользователя
   useEffect(() => {
@@ -76,13 +78,24 @@ export default function ProfilePage() {
         <div className="bg-white shadow rounded-lg overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
             <h1 className="text-2xl font-bold">Профиль пользователя</h1>
-            <button
-              onClick={handleLogout}
-              className="flex items-center text-red-500 hover:text-red-700"
-            >
-              <FiLogOut className="mr-2" />
-              Выйти
-            </button>
+            <div className="flex space-x-3">
+              {isAdmin && (
+                <button
+                  onClick={() => router.push('/admin')}
+                  className="flex items-center text-indigo-600 hover:text-indigo-800"
+                >
+                  <FiSettings className="mr-2" />
+                  Админ-панель
+                </button>
+              )}
+              <button
+                onClick={handleLogout}
+                className="flex items-center text-red-500 hover:text-red-700"
+              >
+                <FiLogOut className="mr-2" />
+                Выйти
+              </button>
+            </div>
           </div>
           
           <div className="px-6 py-6">

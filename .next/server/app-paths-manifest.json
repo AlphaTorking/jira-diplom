@@ -1,8 +1,11 @@
 {
-  "/api/users/route": "app/api/users/route.js",
-  "/api/tasks/[taskId]/route": "app/api/tasks/[taskId]/route.js",
+  "/api/admin/users/route": "app/api/admin/users/route.js",
+  "/api/admin/companies/route": "app/api/admin/companies/route.js",
+  "/api/admin/spaces/route": "app/api/admin/spaces/route.js",
+  "/api/admin/teams/route": "app/api/admin/teams/route.js",
   "/api/groups/route": "app/api/groups/route.js",
-  "/page": "app/page.js",
-  "/tasks/[taskId]/page": "app/tasks/[taskId]/page.js",
-  "/profile/page": "app/profile/page.js"
+  "/profile/page": "app/profile/page.js",
+  "/admin/page": "app/admin/page.js",
+  "/login/page": "app/login/page.js",
+  "/page": "app/page.js"
 }

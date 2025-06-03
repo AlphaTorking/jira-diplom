@@ -6,15 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import type { User } from '@/types/users';
 import type { Task } from '@/types/task';
 import '../../globals.css'  
-
-// Тип для фильтров
-interface Filters {
-  status: string[];
-  priority: string[];
-  criticality: string[];
-  search: string;
-  group: number | null;
-}
+import { TaskStatusLevel, TaskPriorityLevel, TaskCriticalityLevel } from '@prisma/client';
 
 export default function TaskDetail() {
   const params = useParams();
@@ -30,6 +22,27 @@ export default function TaskDetail() {
     workerId: '',
     result: ''
   });
+  const CRITICALITY_LABELS: Record<TaskCriticalityLevel, string> = {
+  [TaskCriticalityLevel.Низкий]: 'Низкий',
+  [TaskCriticalityLevel.Средний]: 'Средний',
+  [TaskCriticalityLevel.Высокий]: 'Высокий',
+  [TaskCriticalityLevel.Критичный]: 'Критичный'
+  };
+  const STATUS_LABELS: Record<TaskStatusLevel, string> = {
+    [TaskStatusLevel.Новое]: 'Новое',
+    [TaskStatusLevel.В_работе]: 'В работе',
+    [TaskStatusLevel.Код_ревью]: 'Код ревью',
+    [TaskStatusLevel.Тестирование]: 'Тестирование',
+    [TaskStatusLevel.Завершено]: 'Завершено',
+    [TaskStatusLevel.Отказ] :'Отказ'
+  };
+  const PRIORITY_LABELS: Record<TaskPriorityLevel, string> = {
+    [TaskPriorityLevel.Очень_низкий] : 'Очень низкий',
+    [TaskPriorityLevel.Низкий] : 'Низкий',
+    [TaskPriorityLevel.Нормальный]: 'Нормальный',
+    [TaskPriorityLevel.Высокий]: 'Высокий',
+    [TaskPriorityLevel.Очень_высокий]: 'Очень высокий'
+  };
 
   // Загрузка задачи и пользователей
   useEffect(() => {
@@ -77,7 +90,7 @@ export default function TaskDetail() {
           status: editedTask.status,
           workerId: editedTask.workerId ? Number(editedTask.workerId) : null,
           result: editedTask.result,
-          closeDate: editedTask.status === 'Завершено' && task?.status !== 'Завершено' 
+          closeDate: editedTask.status === TaskStatusLevel.Завершено && task?.status !== TaskStatusLevel.Завершено 
             ? new Date().toISOString() 
             : task?.closeDate
         })
@@ -218,15 +231,17 @@ export default function TaskDetail() {
                         onChange={(e) => setEditedTask({...editedTask, status: e.target.value})}
                         className="w-full p-2 border rounded-md"
                       >
-                        <option value="Новое">Новое</option>
-                        <option value="В_работе">В работе</option>
-                        <option value="Тестирование">Тестирование</option>
-                        <option value="Код_ревью">Код-ревью</option>
-                        <option value="Завершено">Завершено</option>
-                        <option value="Отказ">Отказ</option>
+                        {Object.entries(STATUS_LABELS).map(([status]) => (
+                        <option 
+                          key={status} 
+                          value={status}
+                        >
+                          {status}
+                        </option>
+                      ))}
                       </select>
                     ) : (
-                      task.status
+                      STATUS_LABELS[task.status]
                     )}
                   </p>
                 </div>
@@ -275,12 +290,12 @@ export default function TaskDetail() {
               <div className="space-y-3">
                 <div>
                   <label className="block text-sm text-gray-500">Критичность</label>
-                  <p className="font-medium">{task.criticality}</p>
+                  {CRITICALITY_LABELS[task.criticality]}
                 </div>
                 
                 <div>
                   <label className="block text-sm text-gray-500">Приоритет</label>
-                  <p className="font-medium">{task.priority}</p>
+                  {PRIORITY_LABELS[task.priority]}
                 </div>
                 
                 <div>

@@ -1,63 +1,59 @@
-import { NextResponse } from 'next/server'
-import prisma from 'lib/prismaClient'
+import { NextResponse } from 'next/server';
+import prisma from '@/lib/prismaClient';
+import { getSession } from '@/lib/session';
 
-export async function GET() {
-    try {
-  await prisma.$connect()
-  console.log('Database connected successfully')
-} catch (connectError) {
-  console.error('Connection error:', connectError)
-}
+export async function GET(req: Request) {
   try {
-    // 1. Запрашивает все группы из БД
+    const session = await getSession();
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: 'Требуется аутентификация' },
+        { status: 401 }
+      );
+    }
+    
     const groups = await prisma.group.findMany({
-      // 2. Включает связанные задачи
+      where: { spaceId: session.user.spaceId || undefined },
       include: {
-        tasks: {
-          // 3. Для каждой задачи включает дополнительные данные
-          include: {
-            author: true,     // Автор задачи
-            worker: true,     // Исполнитель
-            space: true,      // Пространство
-            group: true       // Группа
-          }
-        }
+        tasks: true,
+        space: true
       }
     });
     
-    // 4. Возвращает данные в формате JSON
     return NextResponse.json(groups);
   } catch (error) {
-    // 5. Обработка ошибок
+    console.error('Ошибка загрузки групп:', error);
     return NextResponse.json(
-      { error: 'Ошибка загрузки групп' },
+      { error: 'Ошибка сервера при загрузке групп' },
       { status: 500 }
     );
   }
 }
+
 export async function POST(req: Request) {
   try {
-    const { name, spaceId = 1 } = await req.json(); // spaceId временно фиксирован
-    
-    if (!name) {
+    const session = await getSession();
+    if (!session?.user) {
       return NextResponse.json(
-        { error: 'Название группы обязательно' },
-        { status: 400 }
+        { error: 'Требуется аутентификация' },
+        { status: 401 }
       );
     }
-
+    
+    const { name } = await req.json();
+    
     const newGroup = await prisma.group.create({
       data: {
         name,
-        spaceId: Number(spaceId)
+        spaceId: session.user.spaceId || 1
       }
     });
     
     return NextResponse.json(newGroup, { status: 201 });
   } catch (error) {
-    console.error('Error creating group:', error);
+    console.error('Ошибка создания группы:', error);
     return NextResponse.json(
-      { error: 'Ошибка создания группы' },
+      { error: 'Ошибка сервера при создании группы' },
       { status: 500 }
     );
   }

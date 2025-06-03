@@ -8,7 +8,28 @@ interface Props {
 
 export default function TaskCard({ task }: Props) {
   const router = useRouter();
-  
+  const CRITICALITY_LABELS: Record<TaskCriticalityLevel, string> = {
+  [TaskCriticalityLevel.Низкий]: 'Низкий',
+  [TaskCriticalityLevel.Средний]: 'Средний',
+  [TaskCriticalityLevel.Высокий]: 'Высокий',
+  [TaskCriticalityLevel.Критичный]: 'Критичный'
+  };
+  const STATUS_LABELS: Record<TaskStatusLevel, string> = {
+    [TaskStatusLevel.Новое]: 'Новое',
+    [TaskStatusLevel.В_работе]: 'В работе',
+    [TaskStatusLevel.Код_ревью]: 'Код ревью',
+    [TaskStatusLevel.Тестирование]: 'Тестирование',
+    [TaskStatusLevel.Завершено]: 'Завершено',
+    [TaskStatusLevel.Отказ] :'Отказ'
+  };
+  const PRIORITY_LABELS: Record<TaskPriorityLevel, string> = {
+    [TaskPriorityLevel.Очень_низкий] : 'Очень низкий',
+    [TaskPriorityLevel.Низкий] : 'Низкий',
+    [TaskPriorityLevel.Нормальный]: 'Нормальный',
+    [TaskPriorityLevel.Высокий]: 'Высокий',
+    [TaskPriorityLevel.Очень_высокий]: 'Очень высокий'
+  };
+
   const handleClick = () => {
     router.push(`/tasks/${task.id}`);
   };
@@ -50,19 +71,18 @@ export default function TaskCard({ task }: Props) {
             <p className="text-gray-600 mt-1">{task.description}</p>
           )}
           
-         <div className="flex flex-wrap gap-2 mt-3">
-        <span className={`px-2 py-1 rounded-full text-xs ${statusColors[task.status]}`}>
-          {task.status}
-        </span>
-        <span className={`px-2 py-1 rounded-full text-xs ${priorityColors[task.priority]}`}>
-          Приоритет: {task.priority}
-        </span>
-        <span className={`px-2 py-1 rounded-full text-xs ${criticalityColors[task.criticality]}`}>
-          Критичность: {task.criticality}
-        </span>
-      </div>
-      </div>
-        <div className="bg-gray-200 border-2 border-dashed rounded-xl w-16 h-16" />
+          <div className="flex flex-wrap gap-2 mt-3">
+            <span className={`px-2 py-1 rounded-full text-xs ${statusColors[task.status]}`}>
+              {STATUS_LABELS[task.status]}
+            </span>
+            <span className={`px-2 py-1 rounded-full text-xs ${priorityColors[task.priority]}`}>
+              Приоритет: {PRIORITY_LABELS[task.priority]}
+            </span>
+            <span className={`px-2 py-1 rounded-full text-xs ${criticalityColors[task.criticality]}`}>
+              Критичность: {CRITICALITY_LABELS[task.criticality]}
+            </span>
+          </div>
+        </div>
       </div>
       
       <div className="mt-4 pt-2 border-t border-gray-100 flex justify-between text-sm">

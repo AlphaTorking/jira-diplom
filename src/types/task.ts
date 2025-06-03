@@ -1,11 +1,12 @@
 // types/task.ts
+import { TaskStatusLevel, TaskPriorityLevel, TaskCriticalityLevel } from '@prisma/client';
 export interface Task {
   id: number;
   name: string;
   description: string | null;
-  criticality: string;
-  priority: string;
-  status: string;
+  criticality: TaskCriticalityLevel;
+  priority: TaskPriorityLevel;
+  status: TaskStatusLevel;
   author: User;
   worker?: User | null;
   createDate: string; // Форматированная дата
