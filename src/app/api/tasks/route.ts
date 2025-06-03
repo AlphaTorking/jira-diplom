@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prismaClient';
 import { getSession } from '@/lib/session';
+import { TaskStatusLevel } from '@prisma/client';
 
 export async function GET(req: Request) {
   try {
@@ -63,11 +64,11 @@ export async function POST(req: Request) {
         description: description || '',
         criticality,
         priority,
-        status: 'Новое',
+        status: TaskStatusLevel.Новое,
         authorId: session.user.id,
         workerId: workerId ? parseInt(workerId) : null,
         groupId: parseInt(groupId),
-        spaceId: session.user.spaceId, 
+        spaceId: session.user.spaceId || 1, 
         createDate: new Date()
       },
       include: {
