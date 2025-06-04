@@ -1,17 +1,9 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prismaClient';
-<<<<<<< HEAD
-import { getSession } from '@/lib/session';
-=======
 import { getCurrentUser } from '@/lib/authUtils';
->>>>>>> 862663a (Модуль Авторизации, Сохранение Сессиии. Добавлено Хэширование и jwt-токены)
 
-export async function GET(req: Request, { params }: { params: { taskId: string } }) {
+export async function GET(request: Request, { params }: { params: { taskId: string } }) {
   try {
-<<<<<<< HEAD
-    const session = await getSession();
-    if (!session?.user) {
-=======
     const userId = await getCurrentUser(request);
     if (!userId) {
       return NextResponse.json(
@@ -23,7 +15,6 @@ export async function GET(req: Request, { params }: { params: { taskId: string }
     const taskId = params.taskId;
     
     if (!taskId) {
->>>>>>> 862663a (Модуль Авторизации, Сохранение Сессиии. Добавлено Хэширование и jwt-токены)
       return NextResponse.json(
         { error: 'Требуется аутентификация' },
         { status: 401 }
@@ -31,9 +22,6 @@ export async function GET(req: Request, { params }: { params: { taskId: string }
     }
     
     const task = await prisma.task.findUnique({
-<<<<<<< HEAD
-      where: { id: parseInt(params.taskId) },
-=======
       where: { 
         id: Number(taskId),
         // Проверяем принадлежность задачи пользователю
@@ -42,7 +30,6 @@ export async function GET(req: Request, { params }: { params: { taskId: string }
           { workerId: userId }
         ]
       },
->>>>>>> 862663a (Модуль Авторизации, Сохранение Сессиии. Добавлено Хэширование и jwt-токены)
       include: {
         author: true,
         worker: true,
@@ -50,10 +37,6 @@ export async function GET(req: Request, { params }: { params: { taskId: string }
         space: true
       }
     });
-<<<<<<< HEAD
-    
-=======
->>>>>>> 862663a (Модуль Авторизации, Сохранение Сессиии. Добавлено Хэширование и jwt-токены)
     if (!task) {
       return NextResponse.json(
         { error: 'Задача не найдена' },
@@ -61,13 +44,6 @@ export async function GET(req: Request, { params }: { params: { taskId: string }
       );
     }
     
-    // Проверка прав доступа
-    if (task.authorId !== session.user.id && task.workerId !== session.user.id) {
-      return NextResponse.json(
-        { error: 'Доступ запрещен' },
-        { status: 403 }
-      );
-    }
     
     return NextResponse.json(task);
   } catch (error) {
@@ -81,15 +57,6 @@ export async function GET(req: Request, { params }: { params: { taskId: string }
 
 export async function PUT(req: Request, { params }: { params: { taskId: string } }) {
   try {
-<<<<<<< HEAD
-    const session = await getSession();
-    if (!session?.user) {
-      return NextResponse.json(
-        { error: 'Требуется аутентификация' },
-        { status: 401 }
-      );
-    }
-=======
     const userId = await getCurrentUser(req);
     if (!userId) {
       return NextResponse.json(
@@ -98,7 +65,6 @@ export async function PUT(req: Request, { params }: { params: { taskId: string }
       );
     }
     const body = await req.json();
->>>>>>> 862663a (Модуль Авторизации, Сохранение Сессиии. Добавлено Хэширование и jwt-токены)
     
     const taskId = parseInt(params.taskId);
     const { 
@@ -121,13 +87,6 @@ export async function PUT(req: Request, { params }: { params: { taskId: string }
       );
     }
     
-    // Проверка прав доступа
-    if (existingTask.authorId !== session.user.id && existingTask.workerId !== session.user.id) {
-      return NextResponse.json(
-        { error: 'Доступ запрещен' },
-        { status: 403 }
-      );
-    }
     
     // Обновляем задачу
     const updatedTask = await prisma.task.update({
@@ -156,49 +115,3 @@ export async function PUT(req: Request, { params }: { params: { taskId: string }
   }
 }
 
-export async function DELETE(req: Request, { params }: { params: { taskId: string } }) {
-  try {
-    const session = await getSession();
-    if (!session?.user) {
-      return NextResponse.json(
-        { error: 'Требуется аутентификация' },
-        { status: 401 }
-      );
-    }
-    
-    const taskId = parseInt(params.taskId);
-    
-    // Проверяем существование задачи
-    const existingTask = await prisma.task.findUnique({
-      where: { id: taskId }
-    });
-    
-    if (!existingTask) {
-      return NextResponse.json(
-        { error: 'Задача не найдена' },
-        { status: 404 }
-      );
-    }
-    
-    // Только автор может удалить задачу
-    if (existingTask.authorId !== session.user.id) {
-      return NextResponse.json(
-        { error: 'Доступ запрещен' },
-        { status: 403 }
-      );
-    }
-    
-    // Удаляем задачу
-    await prisma.task.delete({
-      where: { id: taskId }
-    });
-    
-    return new NextResponse(null, { status: 204 });
-  } catch (error) {
-    console.error('Ошибка удаления задачи:', error);
-    return NextResponse.json(
-      { error: 'Ошибка сервера при удалении задачи' },
-      { status: 500 }
-    );
-  }
-}

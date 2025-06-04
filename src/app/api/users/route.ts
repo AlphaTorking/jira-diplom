@@ -1,9 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prismaClient';
-<<<<<<< HEAD
-=======
 import { getCurrentUser } from '@/lib/authUtils';
->>>>>>> 862663a (Модуль Авторизации, Сохранение Сессиии. Добавлено Хэширование и jwt-токены)
 
 export async function GET(req: Request) {
   try {
