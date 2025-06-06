@@ -2,7 +2,10 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prismaClient';
 import { getCurrentUser } from '@/lib/authUtils';
 
-export async function GET(request: Request, { params }: { params: { taskId: string } }) {
+export async function GET(
+  request: Request,
+  { params }: { params: { taskId: string } }
+) {
   try {
     const userId = await getCurrentUser(request);
     if (!userId) {
@@ -14,21 +17,30 @@ export async function GET(request: Request, { params }: { params: { taskId: stri
 
     const taskId = params.taskId;
     
-    if (!taskId) {
+    if (!taskId || isNaN(Number(taskId))) {
       return NextResponse.json(
-        { error: 'Требуется аутентификация' },
-        { status: 401 }
+        { error: 'Некорректный ID задачи' },
+        { status: 400 }
       );
     }
-    
+
+    // Получаем пространство пользователя
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { spaceId: true }
+    });
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Пользователь не найден' },
+        { status: 404 }
+      );
+    }
+
     const task = await prisma.task.findUnique({
       where: { 
         id: Number(taskId),
-        // Проверяем принадлежность задачи пользователю
-        OR: [
-          { authorId: userId },
-          { workerId: userId }
-        ]
+        spaceId: user.spaceId // Проверяем принадлежность к пространству
       },
       include: {
         author: true,
@@ -37,19 +49,19 @@ export async function GET(request: Request, { params }: { params: { taskId: stri
         space: true
       }
     });
+
     if (!task) {
       return NextResponse.json(
-        { error: 'Задача не найдена' },
+        { error: 'Задача не найдена или нет доступа' },
         { status: 404 }
       );
     }
     
-    
     return NextResponse.json(task);
   } catch (error) {
-    console.error('Ошибка загрузки задачи:', error);
+    console.error('Error fetching task:', error);
     return NextResponse.json(
-      { error: 'Ошибка сервера при загрузке задачи' },
+      { error: 'Ошибка загрузки задачи'},
       { status: 500 }
     );
   }

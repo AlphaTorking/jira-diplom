@@ -7,18 +7,19 @@ export async function POST(req: Request) {
   const cookieStore = await cookies();
   const refreshToken = cookieStore.get('refreshToken')?.value;
 
-  if (refreshToken) {
-    try {
+  try {
+    if (refreshToken) {
       const decoded = verifyToken(refreshToken);
       if (decoded) {
+        // Не очищаем refreshToken полностью, а устанавливаем в null
         await prisma.user.update({
           where: { id: decoded.userId },
           data: { refreshToken: null }
         });
       }
-    } catch (error) {
-      console.error('Logout error:', error);
     }
+  } catch (error) {
+    console.error('Logout cleanup error:', error);
   }
 
   const response = NextResponse.json({ message: 'Вы вышли из системы' });

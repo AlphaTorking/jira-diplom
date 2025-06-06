@@ -5,7 +5,6 @@ import { FiUser, FiMail, FiPhone, FiLogOut, FiSave, FiSettings } from 'react-ico
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
 import '@/app/globals.css'
-import { useSession } from '@/app/SessionProvider';
 
 export default function ProfilePage() {
   const router = useRouter();

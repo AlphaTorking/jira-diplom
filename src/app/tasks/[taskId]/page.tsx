@@ -7,6 +7,7 @@ import type { User } from '@/types/users';
 import type { Task } from '@/types/task';
 import '../../globals.css'  
 import { TaskStatusLevel, TaskPriorityLevel, TaskCriticalityLevel } from '@prisma/client';
+import { useAuth } from '@/components/AuthProvider';
 
 export default function TaskDetail() {
   const params = useParams();
@@ -16,6 +17,7 @@ export default function TaskDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [users, setUsers] = useState<User[]>([]);
+  const { user, isLoading: authLoading, getAccessToken } = useAuth();
   // Состояния для редактирования
   const [editedTask, setEditedTask] = useState({
     status: '',
@@ -44,41 +46,62 @@ export default function TaskDetail() {
     [TaskPriorityLevel.Очень_высокий]: 'Очень высокий'
   };
 
+  if (authLoading) {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-2xl">Проверка авторизации...</div>
+    </div>
+  );
+}
+
+  if (!user) {
+  router.push('/login');
+  return null;
+}
   // Загрузка задачи и пользователей
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setIsLoading(true);
-        
-        // Загружаем задачу 
-        const taskRes = await fetch(`/api/tasks/${params.taskId}`);
-        if (!taskRes.ok) throw new Error('Ошибка загрузки задачи');
-        const taskData = await taskRes.json();
-        setTask(taskData);
-        
-        // Устанавливаем значения для редактирования 
-        setEditedTask({
-          status: taskData.status || '',
-          workerId: (taskData.worker?.id?.toString()) || '',
-          result: taskData.result || ''
-        });
-        
-        // Загружаем пользователей
-        const usersRes = await fetch('/api/users');
-        if (!usersRes.ok) throw new Error('Ошибка загрузки пользователей');
-        const usersData = await usersRes.json();
-        setUsers(usersData);
-        
-      } catch (err) {
-        console.error(err);
-        setError('Не удалось загрузить данные');
-      } finally {
-        setIsLoading(false);
+  const fetchData = async () => {
+    try {
+      setIsLoading(true);
+      setError('');
+      const accessToken = getAccessToken();
+      
+      if (!accessToken) {
+        throw new Error('Пользователь не авторизован');
       }
-    };
-    
-    fetchData();
-  }, [params.taskId]); 
+
+      // Загружаем задачу 
+      const taskRes = await fetch(`/api/tasks/${params.taskId}`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        }
+      });
+      
+      if (!taskRes.ok) {
+        const errorData = await taskRes.json();
+        throw new Error(errorData.error || 'Ошибка загрузки задачи');
+      }
+      
+      const taskData = await taskRes.json();
+      setTask(taskData);
+      
+      // Устанавливаем значения для редактирования 
+      setEditedTask({
+        status: taskData.status || '',
+        workerId: (taskData.worker?.id?.toString()) || '',
+        result: taskData.result || ''
+      });
+      
+    } catch (err) {
+      console.error('Error fetching task:', err);
+      setError('Не удалось загрузить данные');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  fetchData();
+}, [params.taskId]);
 
   // Обработка сохранения изменений
   const handleSave = async () => {

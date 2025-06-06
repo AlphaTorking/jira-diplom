@@ -19,10 +19,14 @@ export async function POST() {
     if (!decoded) throw new Error('Invalid token');
 
     const user = await prisma.user.findUnique({
-      where: { id: decoded.userId, refreshToken }
+      where: { id: decoded.userId }
     });
 
     if (!user) throw new Error('User not found');
+
+    if (user.refreshToken !== refreshToken) {
+      throw new Error('Token mismatch');
+    }
 
     const { accessToken, refreshToken: newRefreshToken } = generateTokens(user.id);
 
@@ -47,14 +51,18 @@ export async function POST() {
     response.cookies.set('refreshToken', newRefreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
+      maxAge: 7 * 24 * 60 * 60,
+      sameSite: 'lax',
+      path: '/',
     });
 
     return response;
   } catch (error) {
-    console.error('Token refresh failed:', error);
-    return NextResponse.json(
-      { error: 'Невалидный токен' },
+     const response = NextResponse.json(
+      { error: 'Требуется повторная авторизация' },
       { status: 401 }
     );
+    response.cookies.delete('refreshToken');
   }
+  
 }

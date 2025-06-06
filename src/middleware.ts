@@ -5,15 +5,14 @@ export function middleware(request: NextRequest) {
   const token = request.cookies.get('refreshToken')?.value;
   const { pathname } = request.nextUrl;
 
-  // Публичные роуты
-  const publicPaths = ['/login'];
-  
+  const publicPaths = ['/login', '/password-reset'];
+
   // Если пользователь не авторизован и пытается получить доступ к защищенному роуту
   if (!token && !publicPaths.includes(pathname)) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // Если пользователь авторизован и пытается получить доступ к логину
+  // Если пользователь авторизован и пытается получить доступ к публичному роуту
   if (token && publicPaths.includes(pathname)) {
     return NextResponse.redirect(new URL('/', request.url));
   }
